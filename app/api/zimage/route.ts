@@ -110,11 +110,8 @@ async function zimageHandler(request: NextRequest) {
       prompt: prompt,
       width: width,
       height: height,
-      // zimage.run 不支持这些参数，但保留以备将来使用
-      // negative_prompt: negative_prompt || process.env.ZIMAGE_DEFAULT_NEGATIVE_PROMPT || '模糊,水印,低质量,变形',
-      // batch_size: batch_size,
-      // steps: steps || parseInt(process.env.ZIMAGE_DEFAULT_STEPS || '8'),
-      // cfg_scale: guidance_scale || parseFloat(process.env.ZIMAGE_DEFAULT_GUIDANCE_SCALE || '7')
+      modelType: 'turbo', // Z-Image API 要求的模型类型
+      batchSize: batch_size || 1 // 支持批量生成
     }
 
     // 如果有图片，添加到请求中（注意：z-image 主要支持文生图，图生图功能有限）
