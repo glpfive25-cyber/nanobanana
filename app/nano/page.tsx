@@ -344,6 +344,17 @@ export default function NanoPage() {
         requestData.guidance_scale = 7
         requestData.batch_size = 1
         requestData.negative_prompt = '模糊,水印,低质量,变形'
+
+        // 读取并传递 Z-Image 验证 cookie
+        const cookies = document.cookie.split(';')
+        const verificationCookie = cookies.find(c => c.trim().startsWith('z_image_anon_verified='))
+        if (verificationCookie) {
+          const cookieValue = verificationCookie.split('=')[1]
+          requestData.verificationCookie = cookieValue
+          console.log('已添加验证 cookie')
+        } else {
+          console.warn('未找到 z_image_anon_verified cookie，可能需要先访问 zimage.run 进行验证')
+        }
       }
 
       // 使用时间戳作为用户标识
@@ -385,6 +396,15 @@ export default function NanoPage() {
       }
 
       if (!response.ok) {
+        // 检查是否是 Z-Image 验证错误
+        if (response.status === 403 && model === 'zimage') {
+          const errorMsg = `Z-Image 需要验证：请先在新标签页访问 https://zimage.run 完成人机验证，然后刷新本页面再试。`
+          showError('需要验证', errorMsg)
+          // 自动打开 zimage.run（可选）
+          window.open('https://zimage.run', '_blank')
+          return
+        }
+
         // 检查是否是额度不足错误
         if (response.status === 429 ||
             (data.error && (
@@ -911,24 +931,20 @@ export default function NanoPage() {
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <span style={{ color: '#888', fontSize: '0.9rem' }}>{t.model.label}</span>
           <button
-            onClick={() => setModel('zimage')}
+            disabled
             style={{
               padding: '0.5rem 1rem',
-              background: model === 'zimage'
-                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                : 'transparent',
-              border: model === 'zimage' ? 'none' : '1px solid #f59e0b',
-              color: model === 'zimage' ? 'white' : '#f59e0b',
+              background: '#333',
+              border: '1px solid #555',
+              color: '#888',
               borderRadius: '0.5rem',
-              cursor: 'pointer',
+              cursor: 'not-allowed',
               fontSize: '0.9rem',
               transition: 'all 0.3s ease',
-              boxShadow: model === 'zimage'
-                ? '0 4px 15px rgba(245, 158, 11, 0.3)'
-                : 'none'
+              opacity: 0.6
             }}
           >
-            Z-Image <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>(免费)</span>
+            Z-Image <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>(暂不可用)</span>
           </button>
           <button
             onClick={() => setModel('gemini-3-pro-image-preview')}
@@ -1620,26 +1636,23 @@ export default function NanoPage() {
             <div style={{ marginBottom: '1.5rem' }}>
               {/* 免费服务提示 */}
               <div style={{
-                backgroundColor: model === 'zimage' ? '#422006' : '#0f2419',
-                border: model === 'zimage' ? '1px solid #f59e0b' : '1px solid #10b981',
+                backgroundColor: '#0f2419',
+                border: '1px solid #10b981',
                 borderRadius: '0.5rem',
                 padding: '0.75rem',
                 marginBottom: '1rem',
                 textAlign: 'center'
               }}>
                 <div style={{
-                  color: model === 'zimage' ? '#f59e0b' : '#10b981',
+                  color: '#10b981',
                   fontSize: '0.9rem',
                   fontWeight: 'bold',
                   marginBottom: '0.25rem'
                 }}>
-                  {model === 'zimage' ? '🎉 Z-Image 免费模型' : t.freeService.title}
+                  {t.freeService.title}
                 </div>
                 <p style={{ color: '#ccc', fontSize: '0.8rem', margin: '0' }}>
-                  {model === 'zimage'
-                    ? '无需 API Key，完全免费，无限使用！'
-                    : t.freeService.description
-                  }
+                  {t.freeService.description}
                 </p>
               </div>
 

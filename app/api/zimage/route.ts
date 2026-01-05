@@ -64,7 +64,17 @@ async function fetchWithAgent(url: string, options: any = {}): Promise<Response>
 
 async function zimageHandler(request: NextRequest) {
   try {
-    const { prompt, imageData, imageDataArray, size = '1k', guidance_scale = 7, seed = -1, steps = 8, negative_prompt = '', batch_size = 1 } = await request.json()
+    // Z-Image 服务当前不可用 - 免费模型已失效
+    return NextResponse.json({
+      error: 'Z-Image 服务暂时不可用',
+      code: 'SERVICE_UNAVAILABLE',
+      message: '由于免费配额限制，Z-Image 服务已暂时关闭。建议使用 Gemini 模型进行生成。',
+      suggestion: '请切换到 Gemini 模型继续使用'
+    }, { status: 503 })
+
+    // 以下代码保留以便将来恢复服务
+    /*
+    const { prompt, imageData, imageDataArray, size = '1k', guidance_scale = 7, seed = -1, steps = 8, negative_prompt = '', batch_size = 1, verificationCookie } = await request.json()
 
     if (!prompt) {
       return NextResponse.json({ error: '请提供描述' }, { status: 400 })
@@ -134,12 +144,21 @@ async function zimageHandler(request: NextRequest) {
       try {
         console.log(`Z-Image API 尝试 ${attempt}/${maxRetries}`)
 
+        // 构建请求头，包含验证 cookie
+        const headers: any = {
+          'Content-Type': 'application/json',
+        }
+
+        // 如果前端提供了验证 cookie，添加到请求头
+        if (verificationCookie) {
+          headers['Cookie'] = `z_image_anon_verified=${verificationCookie}`
+          console.log('使用验证 cookie:', verificationCookie.substring(0, 20) + '...')
+        }
+
         // 使用自定义 fetch 函数来处理 SSL 问题
         response = await fetchWithAgent(apiUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: headers,
           body: JSON.stringify(requestBody),
         })
 
@@ -242,6 +261,7 @@ async function zimageHandler(request: NextRequest) {
       error: '未能从响应中提取任务UUID',
       raw_response: data
     }, { status: 500 })
+    */
 
   } catch (error) {
     console.error('Z-Image生成错误:', error)
