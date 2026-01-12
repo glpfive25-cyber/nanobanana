@@ -320,7 +320,7 @@ export default function NanoPage() {
       // 根据选择的模型决定API端点
       let apiEndpoint = '/api/gemini'
       if (model === 'zimage') {
-        apiEndpoint = '/api/zimage'
+        apiEndpoint = '/api/gitee-ai'
       } else if (model === 'gemini' && mode === 'text') {
         apiEndpoint = '/api/generate'
       } else if (model === 'gemini-3-pro-image-preview') {
@@ -338,23 +338,15 @@ export default function NanoPage() {
 
       // 根据不同模型添加特定参数
       if (model === 'zimage') {
-        // z-image 特定参数
-        requestData.size = imageSize
-        requestData.steps = 8
-        requestData.guidance_scale = 7
-        requestData.batch_size = 1
-        requestData.negative_prompt = '模糊,水印,低质量,变形'
-
-        // 读取并传递 Z-Image 验证 cookie
-        const cookies = document.cookie.split(';')
-        const verificationCookie = cookies.find(c => c.trim().startsWith('z_image_anon_verified='))
-        if (verificationCookie) {
-          const cookieValue = verificationCookie.split('=')[1]
-          requestData.verificationCookie = cookieValue
-          console.log('已添加验证 cookie')
-        } else {
-          console.warn('未找到 z_image_anon_verified cookie，可能需要先访问 zimage.run 进行验证')
-        }
+        // Gitee AI (z-image-turbo) 特定参数
+        requestData.model = 'z-image-turbo'
+        requestData.num_inference_steps = 9
+        requestData.guidance_scale = 1
+        requestData.image_scale = 1
+        requestData.negative_prompt = 'blurry ugly bad'
+        
+        // 注意：Gitee AI 每天限量 100 张
+        console.log('使用 Gitee AI (z-image-turbo) - 每天限量 100 张')
       }
 
       // 使用时间戳作为用户标识
@@ -396,12 +388,17 @@ export default function NanoPage() {
       }
 
       if (!response.ok) {
-        // 检查是否是 Z-Image 验证错误
-        if (response.status === 403 && model === 'zimage') {
-          const errorMsg = `Z-Image 需要验证：请先在新标签页访问 https://zimage.run 完成人机验证，然后刷新本页面再试。`
-          showError('需要验证', errorMsg)
-          // 自动打开 zimage.run（可选）
-          window.open('https://zimage.run', '_blank')
+        // 检查是否是 Gitee AI 配额超限
+        if (response.status === 429 && model === 'zimage') {
+          const errorMsg = data.message || '已达到每日生成限额（100张/天），请明天再来！'
+          showError('配额已用完', errorMsg)
+          return
+        }
+
+        // 检查是否是服务不可用
+        if (response.status === 503 && model === 'zimage') {
+          const errorMsg = data.message || 'Z-Image 服务暂时不可用'
+          showError('服务不可用', errorMsg)
           return
         }
 
@@ -430,20 +427,16 @@ export default function NanoPage() {
         showError('生成失败', errorMsg)
         return
       } else {
-        // 处理 z-image 的异步响应
-        if (model === 'zimage' && data.taskUuid) {
-          // 设置初始结果，显示任务已提交
-          setResult({
-            taskUuid: data.taskUuid,
-            status: 'pending',
-            message: '任务已提交，正在生成中...',
-            model: 'zimage-turbo'
-          })
-
-          // 开始轮询获取结果
-          pollZImageResult(data.taskUuid)
-        } else {
-          setResult(data)
+        // Gitee AI 直接返回结果，不需要轮询
+        setResult(data)
+        
+        // 如果响应中包含配额信息，显示给用户
+        if (model === 'zimage' && data.quota) {
+          console.log(`Gitee AI 配额: 已用 ${data.quota.used}/${data.quota.limit}, 剩余 ${data.quota.remaining}`)
+          // 可以在界面上显示配额信息
+          if (data.quota.remaining < 10) {
+            showError('配额提醒', `今日配额即将用完，剩余 ${data.quota.remaining} 张`)
+          }
         }
       }
     } catch (err) {
@@ -623,7 +616,7 @@ export default function NanoPage() {
       case 'gemini':
         return language === 'zh' ? 'Gemini 2.5 Flash' : 'Gemini 2.5 Flash'
       case 'zimage':
-        return language === 'zh' ? 'Z-Image (免费模型)' : 'Z-Image (Free Model)'
+        return language === 'zh' ? 'Gitee AI (限量100张/天)' : 'Gitee AI (100/day limit)'
             default:
         return model
     }
@@ -931,20 +924,24 @@ export default function NanoPage() {
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <span style={{ color: '#888', fontSize: '0.9rem' }}>{t.model.label}</span>
           <button
-            disabled
+            onClick={() => setModel('zimage')}
             style={{
               padding: '0.5rem 1rem',
-              background: '#333',
-              border: '1px solid #555',
-              color: '#888',
+              background: model === 'zimage'
+                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                : 'transparent',
+              border: model === 'zimage' ? 'none' : '1px solid #f59e0b',
+              color: model === 'zimage' ? 'white' : '#f59e0b',
               borderRadius: '0.5rem',
-              cursor: 'not-allowed',
+              cursor: 'pointer',
               fontSize: '0.9rem',
               transition: 'all 0.3s ease',
-              opacity: 0.6
+              boxShadow: model === 'zimage'
+                ? '0 4px 15px rgba(245, 158, 11, 0.3)'
+                : 'none'
             }}
           >
-            Z-Image <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>(暂不可用)</span>
+            Gitee AI <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>(100张/天)</span>
           </button>
           <button
             onClick={() => setModel('gemini-3-pro-image-preview')}

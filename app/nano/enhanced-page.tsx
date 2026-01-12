@@ -13,7 +13,7 @@ type Model = 'gemini-3-pro-image-preview' | 'gemini' | 'zimage'
 const getModelDisplayName = (model: Model): string => {
   switch (model) {
     case 'zimage':
-      return 'Z-Image (免费)'
+      return 'Gitee AI (限量100张/天)'
     case 'gemini-3-pro-image-preview':
       return 'NanoBanana2 (Gemini 3 Pro)'
     case 'gemini':
@@ -144,7 +144,7 @@ export default function EnhancedNanoPage() {
 
       let endpoint = '/api/gemini'
       if (model === 'zimage') {
-        endpoint = '/api/zimage'
+        endpoint = '/api/gitee-ai'
       }
       
       const response = await fetch(endpoint, {

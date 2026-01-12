@@ -24,6 +24,7 @@ A beautiful Next.js web application powered by Google's Gemini 2.5 Flash Image P
 - **Multi-Model Support**: 
   - **Gemini 2.5 Flash**: Google's latest AI model for image generation
   - **Doubao SeedReam 4.0**: ByteDance's advanced image generation model
+  - **Gitee AI (z-image-turbo)**: Fast image generation with daily quota (100 images/day)
 - **Vercel Ready**: Optimized for seamless deployment
 
 ## 🚀 Quick Start
@@ -56,7 +57,10 @@ A beautiful Next.js web application powered by Google's Gemini 2.5 Flash Image P
    GEMINI_API_KEY=your_gemini_api_key_here
    MAYNOR_API_KEY=your_doubao_api_key_here
    MAYNOR_API_URL=https://apipro.maynor1024.live
+   GITEE_AI_API_KEY=your_gitee_ai_api_key_here
    ```
+   
+   **Note**: Gitee AI has a daily limit of 100 images. See [Gitee AI Documentation](docs/GITEE_AI.md) for details.
 
 4. **Run the development server**
    ```bash
