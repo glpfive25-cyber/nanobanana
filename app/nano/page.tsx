@@ -371,6 +371,9 @@ export default function NanoPage() {
         apiUrl: requestData.apiUrl,
         model
       })
+      
+      // 调试：打印完整请求数据
+      console.log('📤 完整请求数据:', JSON.stringify(requestData, null, 2))
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',

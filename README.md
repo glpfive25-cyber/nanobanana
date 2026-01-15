@@ -53,14 +53,24 @@ A beautiful Next.js web application powered by Google's Gemini 2.5 Flash Image P
    cp .env.example .env.local
    ```
    Edit `.env.local` and add your API keys:
-   ```
+   ```env
+   # Gemini API (Google)
    GEMINI_API_KEY=your_gemini_api_key_here
+   
+   # Doubao API (ByteDance)
    MAYNOR_API_KEY=your_doubao_api_key_here
    MAYNOR_API_URL=https://apipro.maynor1024.live
-   GITEE_AI_API_KEY=your_gitee_ai_api_key_here
+   
+   # Gitee AI (支持多个 Key，用逗号分隔)
+   # ⚠️ 重要：默认 Key 已失效，必须配置自己的 Key
+   GITEE_AI_API_KEYS=your_key_1,your_key_2,your_key_3
    ```
    
-   **Note**: Gitee AI has a daily limit of 100 images. See [Gitee AI Documentation](docs/GITEE_AI.md) for details.
+   **⚠️ Gitee AI 配置说明**:
+   - 每个 Key 每天限量 100 张图片
+   - 支持配置多个 Key 实现轮询（5个Key = 500张/天）
+   - 访问 [https://ai.gitee.com](https://ai.gitee.com) 获取 API Key
+   - 详细配置指南：[Gitee AI Setup Guide](docs/GITEE_AI_SETUP.md)
 
 4. **Run the development server**
    ```bash

@@ -48,6 +48,16 @@ async function giteeAiHandler(request: NextRequest) {
       }, { status: 429 })
     }
 
+    // 解析请求体
+    let requestBody
+    try {
+      requestBody = await request.json()
+      console.log('📥 收到请求:', JSON.stringify(requestBody, null, 2))
+    } catch (e) {
+      console.error('❌ 请求体解析失败:', e)
+      return NextResponse.json({ error: '请求格式错误' }, { status: 400 })
+    }
+
     const {
       prompt,
       negative_prompt = 'blurry ugly bad',
@@ -58,20 +68,56 @@ async function giteeAiHandler(request: NextRequest) {
       control_mode,
       control_context_scale = 0.75,
       image_scale = 1
-    } = await request.json()
+    } = requestBody
 
     if (!prompt) {
-      return NextResponse.json({ error: '请提供图片描述' }, { status: 400 })
+      console.error('❌ 缺少 prompt 参数')
+      return NextResponse.json({ 
+        error: '请提供图片描述',
+        received: Object.keys(requestBody)
+      }, { status: 400 })
     }
 
-    // Gitee AI API 配置
+    // Gitee AI API 配置 - 支持多个 API Key 轮询
     const apiUrl = 'https://ai.gitee.com/v1/images/generations'
-    const apiKey = process.env.GITEE_AI_API_KEY || 'W593PWIER85HX7EQTVXXCVZ28Y4HAHJR4COYXPJZ'
-
+    
+    // 从环境变量读取多个 API Key（用逗号分隔）
+    // 注意：默认 Key 已失效，请配置自己的 Key
+    const apiKeysString = process.env.GITEE_AI_API_KEYS || process.env.GITEE_AI_API_KEY || ''
+    
+    if (!apiKeysString) {
+      console.error('❌ 未配置 GITEE_AI_API_KEYS')
+      return NextResponse.json({
+        error: '未配置 API Key',
+        code: 'NO_API_KEY',
+        message: '请在 .env.local 中配置 GITEE_AI_API_KEYS',
+        suggestion: '访问 https://ai.gitee.com 获取你的 API Key，然后在 .env.local 中配置：\nGITEE_AI_API_KEYS=your_api_key_here'
+      }, { status: 500 })
+    }
+    
+    const apiKeys = apiKeysString.split(',').map(key => key.trim()).filter(key => key.length > 0)
+    
+    if (apiKeys.length === 0) {
+      console.error('❌ API Key 列表为空')
+      return NextResponse.json({
+        error: 'API Key 配置错误',
+        code: 'INVALID_API_KEY',
+        message: '请检查 GITEE_AI_API_KEYS 配置',
+        suggestion: '确保环境变量格式正确：GITEE_AI_API_KEYS=key1,key2,key3'
+      }, { status: 500 })
+    }
+    
+    // 轮询选择 API Key（基于当前使用次数）
+    const currentKeyIndex = dailyUsage.count % apiKeys.length
+    const apiKey = apiKeys[currentKeyIndex]
+    
     console.log('Gitee AI 请求:', {
       prompt: prompt.substring(0, 50) + '...',
       model,
-      remaining: DAILY_LIMIT - dailyUsage.count
+      remaining: DAILY_LIMIT - dailyUsage.count,
+      totalKeys: apiKeys.length,
+      currentKeyIndex: currentKeyIndex + 1,
+      keyPreview: apiKey.substring(0, 10) + '...'
     })
 
     // 构建请求体 - 使用 OpenAI 兼容格式
@@ -105,10 +151,24 @@ async function giteeAiHandler(request: NextRequest) {
       const errorData = await response.json().catch(() => ({}))
       console.error('Gitee AI API 错误:', errorData)
 
+      // 检查是否是配额超限错误
+      if (errorData.error?.message?.includes('最大使用额') || 
+          errorData.error?.message?.includes('配额') ||
+          errorData.error?.message?.includes('quota')) {
+        return NextResponse.json({
+          error: 'API Key 配额已用完',
+          code: 'API_QUOTA_EXCEEDED',
+          message: errorData.error?.message || '当前 API Key 已达到使用限额',
+          suggestion: '请更换新的 API Key 或等待配额重置。访问 https://ai.gitee.com 获取新的 API Key',
+          details: errorData
+        }, { status: 429 })
+      }
+
       return NextResponse.json({
         error: errorData.error?.message || '生成失败',
+        code: errorData.error?.code || 'GENERATION_FAILED',
         details: errorData,
-        suggestion: '请检查提示词或稍后重试'
+        suggestion: '请检查提示词或稍后重试。如果问题持续，请更换 API Key'
       }, { status: response.status })
     }
 
