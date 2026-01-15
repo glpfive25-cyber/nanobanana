@@ -6,6 +6,14 @@ export const maxDuration = 30
 
 export async function POST(request: NextRequest) {
   try {
+    // 运行时检查 Stripe 配置
+    if (!stripe || !process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ 
+        error: 'Stripe 未配置',
+        message: '请在 .env.local 中配置 STRIPE_SECRET_KEY'
+      }, { status: 503 })
+    }
+
     const { planId, customerEmail, customerName } = await request.json()
     
     // 验证必要参数

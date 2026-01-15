@@ -120,8 +120,8 @@ async function giteeAiHandler(request: NextRequest) {
       keyPreview: apiKey.substring(0, 10) + '...'
     })
 
-    // 构建请求体 - 使用 OpenAI 兼容格式
-    const requestBody: any = {
+    // 构建发送给 Gitee AI 的请求体 - 使用 OpenAI 兼容格式
+    const giteeRequestBody: any = {
       prompt,
       model,
       negative_prompt,
@@ -132,9 +132,9 @@ async function giteeAiHandler(request: NextRequest) {
 
     // 可选参数：控制图像
     if (control_image) {
-      requestBody.control_image = control_image
-      requestBody.control_mode = control_mode || 'HED'
-      requestBody.control_context_scale = control_context_scale
+      giteeRequestBody.control_image = control_image
+      giteeRequestBody.control_mode = control_mode || 'HED'
+      giteeRequestBody.control_context_scale = control_context_scale
     }
 
     // 发送请求到 Gitee AI
@@ -144,7 +144,7 @@ async function giteeAiHandler(request: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(giteeRequestBody)
     })
 
     if (!response.ok) {
